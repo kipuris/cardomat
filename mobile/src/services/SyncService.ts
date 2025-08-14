@@ -1,9 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, AppState, AppStateStatus } from 'react-native';
-import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert, AppState, AppStateStatus } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
 
-import { apiService } from './ApiService';
-import { LoyaltyCard, Transaction } from '../types/card';
+import { apiService } from "./ApiService";
+import { LoyaltyCard, Transaction } from "../types/card";
 
 export interface SyncStatus {
   isOnline: boolean;
@@ -14,8 +14,8 @@ export interface SyncStatus {
 
 export interface PendingChange {
   id: string;
-  type: 'CREATE' | 'UPDATE' | 'DELETE';
-  entity: 'card' | 'transaction';
+  type: "CREATE" | "UPDATE" | "DELETE";
+  entity: "card" | "transaction";
   data: any;
   timestamp: Date;
   retryCount: number;
@@ -37,13 +37,13 @@ export class SyncService {
   private async initialize() {
     // Load sync status from storage
     await this.loadSyncStatus();
-    
+
     // Set up network monitoring
     this.setupNetworkMonitoring();
-    
+
     // Set up app state monitoring
     this.setupAppStateMonitoring();
-    
+
     // Perform initial sync if online
     const netInfo = await NetInfo.fetch();
     if (netInfo.isConnected) {
@@ -55,20 +55,20 @@ export class SyncService {
     NetInfo.addEventListener((state) => {
       const wasOnline = this.syncStatus.isOnline;
       this.syncStatus.isOnline = state.isConnected ?? false;
-      
+
       if (!wasOnline && this.syncStatus.isOnline) {
         this.handleOnline();
       } else if (wasOnline && !this.syncStatus.isOnline) {
         this.handleOffline();
       }
-      
+
       this.notifyListeners();
     });
   }
 
   private setupAppStateMonitoring() {
-    AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'active' && this.syncStatus.isOnline) {
+    AppState.addEventListener("change", (nextAppState: AppStateStatus) => {
+      if (nextAppState === "active" && this.syncStatus.isOnline) {
         // Sync when app becomes active and we're online
         this.syncPendingChanges();
       }
@@ -76,22 +76,24 @@ export class SyncService {
   }
 
   private async handleOnline() {
-    console.log('Network: Online');
+    console.log("Network: Online");
     try {
       await this.syncPendingChanges();
     } catch (error) {
-      console.error('Sync on network restoration failed:', error);
+      console.error("Sync on network restoration failed:", error);
     }
   }
 
   private handleOffline() {
-    console.log('Network: Offline');
+    console.log("Network: Offline");
     this.syncStatus.isSyncing = false;
     this.notifyListeners();
   }
 
   // Add a change to the pending queue
-  async addPendingChange(change: Omit<PendingChange, 'id' | 'timestamp' | 'retryCount'>) {
+  async addPendingChange(
+    change: Omit<PendingChange, "id" | "timestamp" | "retryCount">
+  ) {
     try {
       const pendingChange: PendingChange = {
         ...change,
@@ -102,9 +104,9 @@ export class SyncService {
 
       const existing = await this.getPendingChanges();
       existing.push(pendingChange);
-      
-      await AsyncStorage.setItem('pending_changes', JSON.stringify(existing));
-      
+
+      await AsyncStorage.setItem("pending_changes", JSON.stringify(existing));
+
       this.syncStatus.pendingChanges = existing.length;
       this.notifyListeners();
 
@@ -113,13 +115,31 @@ export class SyncService {
         this.syncPendingChanges();
       }
     } catch (error) {
-      console.error('Failed to add pending change:', error);
+      console.error("Failed to add pending change:", error);
     }
+  }
+
+  // Check if user is authenticated
+  private async isAuthenticated(): Promise<boolean> {
+    const token = await AsyncStorage.getItem("auth_token");
+    if (!token || token === "undefined" || token === "null") {
+      return false;
+    }
+
+    // Basic token format validation (should be a non-empty string)
+    return token.length > 0;
   }
 
   // Sync pending changes with the server
   async syncPendingChanges(): Promise<void> {
     if (this.syncStatus.isSyncing || !this.syncStatus.isOnline) {
+      return;
+    }
+
+    // Skip sync if not authenticated - work offline only
+    const isAuth = await this.isAuthenticated();
+    if (!isAuth) {
+      console.log("Skipping sync - no auth token (offline-only mode)");
       return;
     }
 
@@ -136,13 +156,31 @@ export class SyncService {
           successfulChanges.push(change.id);
         } catch (error) {
           console.error(`Failed to sync change ${change.id}:`, error);
-          
-          // Increment retry count
+
+          // Check if it's an authentication error
+          const isAuthError =
+            error instanceof Error &&
+            (error.message.includes("Invalid or expired token") ||
+              error.message.includes("Access token required") ||
+              error.message.includes("Unauthorized"));
+
+          if (isAuthError) {
+            console.warn(
+              "Authentication error detected, clearing all pending changes"
+            );
+            // Clear all pending changes since they won't succeed without valid auth
+            await this.clearPendingChanges();
+            break; // Exit the loop since we cleared everything
+          }
+
+          // Increment retry count for non-auth errors
           change.retryCount++;
-          
+
           // Remove changes that have failed too many times
           if (change.retryCount >= 3) {
-            console.warn(`Removing change ${change.id} after ${change.retryCount} failed attempts`);
+            console.warn(
+              `Removing change ${change.id} after ${change.retryCount} failed attempts`
+            );
             successfulChanges.push(change.id);
           }
         }
@@ -151,17 +189,19 @@ export class SyncService {
       // Remove successfully synced changes
       if (successfulChanges.length > 0) {
         const remainingChanges = pendingChanges.filter(
-          change => !successfulChanges.includes(change.id)
+          (change) => !successfulChanges.includes(change.id)
         );
-        await AsyncStorage.setItem('pending_changes', JSON.stringify(remainingChanges));
+        await AsyncStorage.setItem(
+          "pending_changes",
+          JSON.stringify(remainingChanges)
+        );
         this.syncStatus.pendingChanges = remainingChanges.length;
       }
 
       this.syncStatus.lastSync = new Date();
       await this.saveSyncStatus();
-
     } catch (error) {
-      console.error('Sync process failed:', error);
+      console.error("Sync process failed:", error);
     } finally {
       this.syncStatus.isSyncing = false;
       this.notifyListeners();
@@ -170,10 +210,10 @@ export class SyncService {
 
   private async processPendingChange(change: PendingChange) {
     switch (change.entity) {
-      case 'card':
+      case "card":
         await this.syncCardChange(change);
         break;
-      case 'transaction':
+      case "transaction":
         await this.syncTransactionChange(change);
         break;
       default:
@@ -183,13 +223,13 @@ export class SyncService {
 
   private async syncCardChange(change: PendingChange) {
     switch (change.type) {
-      case 'CREATE':
+      case "CREATE":
         await apiService.createCard(change.data);
         break;
-      case 'UPDATE':
+      case "UPDATE":
         await apiService.updateCard(change.data.id, change.data);
         break;
-      case 'DELETE':
+      case "DELETE":
         await apiService.deleteCard(change.data.id);
         break;
     }
@@ -197,7 +237,7 @@ export class SyncService {
 
   private async syncTransactionChange(change: PendingChange) {
     switch (change.type) {
-      case 'CREATE':
+      case "CREATE":
         await apiService.createTransaction(change.data);
         break;
       // Transactions are typically append-only, so no UPDATE/DELETE
@@ -205,9 +245,12 @@ export class SyncService {
   }
 
   // Sync data from server (pull)
-  async syncFromServer(): Promise<{ cards: LoyaltyCard[]; transactions: Transaction[] }> {
+  async syncFromServer(): Promise<{
+    cards: LoyaltyCard[];
+    transactions: Transaction[];
+  }> {
     if (!this.syncStatus.isOnline) {
-      throw new Error('Cannot sync from server while offline');
+      throw new Error("Cannot sync from server while offline");
     }
 
     try {
@@ -218,7 +261,7 @@ export class SyncService {
 
       return { cards, transactions };
     } catch (error) {
-      console.error('Failed to sync from server:', error);
+      console.error("Failed to sync from server:", error);
       throw error;
     }
   }
@@ -226,7 +269,10 @@ export class SyncService {
   // Force full sync (pull and push)
   async performFullSync(): Promise<void> {
     if (!this.syncStatus.isOnline) {
-      Alert.alert('Offline', 'Cannot sync while offline. Please check your internet connection.');
+      Alert.alert(
+        "Offline",
+        "Cannot sync while offline. Please check your internet connection."
+      );
       return;
     }
 
@@ -243,9 +289,11 @@ export class SyncService {
       // Merge with local data (this would typically be handled by the app context)
       // For now, we'll just return the server data
       return serverData as any;
-
     } catch (error) {
-      Alert.alert('Sync Error', 'Failed to sync with server. Please try again later.');
+      Alert.alert(
+        "Sync Error",
+        "Failed to sync with server. Please try again later."
+      );
       throw error;
     } finally {
       this.syncStatus.isSyncing = false;
@@ -256,10 +304,10 @@ export class SyncService {
   // Get pending changes from storage
   private async getPendingChanges(): Promise<PendingChange[]> {
     try {
-      const changes = await AsyncStorage.getItem('pending_changes');
+      const changes = await AsyncStorage.getItem("pending_changes");
       return changes ? JSON.parse(changes) : [];
     } catch (error) {
-      console.error('Failed to get pending changes:', error);
+      console.error("Failed to get pending changes:", error);
       return [];
     }
   }
@@ -267,7 +315,7 @@ export class SyncService {
   // Load sync status from storage
   private async loadSyncStatus() {
     try {
-      const status = await AsyncStorage.getItem('sync_status');
+      const status = await AsyncStorage.getItem("sync_status");
       if (status) {
         const parsed = JSON.parse(status);
         this.syncStatus = {
@@ -279,28 +327,31 @@ export class SyncService {
       const pendingChanges = await this.getPendingChanges();
       this.syncStatus.pendingChanges = pendingChanges.length;
     } catch (error) {
-      console.error('Failed to load sync status:', error);
+      console.error("Failed to load sync status:", error);
     }
   }
 
   // Save sync status to storage
   private async saveSyncStatus() {
     try {
-      await AsyncStorage.setItem('sync_status', JSON.stringify({
-        lastSync: this.syncStatus.lastSync?.toISOString(),
-      }));
+      await AsyncStorage.setItem(
+        "sync_status",
+        JSON.stringify({
+          lastSync: this.syncStatus.lastSync?.toISOString(),
+        })
+      );
     } catch (error) {
-      console.error('Failed to save sync status:', error);
+      console.error("Failed to save sync status:", error);
     }
   }
 
   // Subscribe to sync status changes
   addListener(listener: (status: SyncStatus) => void) {
     this.listeners.push(listener);
-    
+
     // Immediately notify the listener with current status
     listener(this.syncStatus);
-    
+
     // Return unsubscribe function
     return () => {
       const index = this.listeners.indexOf(listener);
@@ -311,7 +362,7 @@ export class SyncService {
   }
 
   private notifyListeners() {
-    this.listeners.forEach(listener => listener(this.syncStatus));
+    this.listeners.forEach((listener) => listener(this.syncStatus));
   }
 
   // Get current sync status
@@ -322,11 +373,11 @@ export class SyncService {
   // Clear all pending changes (useful for testing or reset)
   async clearPendingChanges() {
     try {
-      await AsyncStorage.removeItem('pending_changes');
+      await AsyncStorage.removeItem("pending_changes");
       this.syncStatus.pendingChanges = 0;
       this.notifyListeners();
     } catch (error) {
-      console.error('Failed to clear pending changes:', error);
+      console.error("Failed to clear pending changes:", error);
     }
   }
 
@@ -336,7 +387,7 @@ export class SyncService {
       const netInfo = await NetInfo.fetch();
       return netInfo.isConnected ?? false;
     } catch (error) {
-      console.error('Failed to check online status:', error);
+      console.error("Failed to check online status:", error);
       return false;
     }
   }

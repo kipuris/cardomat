@@ -1,10 +1,11 @@
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default-jwt-secret-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET: string =
+  process.env.JWT_SECRET || "default-jwt-secret-change-in-production";
+const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || "7d";
 
 export interface JWTPayload {
   userId: number;
@@ -13,19 +14,21 @@ export interface JWTPayload {
 }
 
 export const generateToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  } as jwt.SignOptions);
 };
 
 export const verifyToken = (token: string): JWTPayload => {
   try {
     return jwt.verify(token, JWT_SECRET) as JWTPayload;
   } catch (error) {
-    throw new Error('Invalid or expired token');
+    throw new Error("Invalid or expired token");
   }
 };
 
 export const generateAPIKey = (): string => {
   // Generate a 32-character API key
-  const crypto = require('node:crypto');
-  return crypto.randomBytes(32).toString('hex');
+  const crypto = require("crypto");
+  return crypto.randomBytes(32).toString("hex");
 };

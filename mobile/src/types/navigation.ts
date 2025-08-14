@@ -1,4 +1,4 @@
-import { LoyaltyCard } from './card';
+import { LoyaltyCard } from "./card";
 
 export type RootTabParamList = {
   Dashboard: undefined;
@@ -9,6 +9,7 @@ export type RootTabParamList = {
 };
 
 export type RootStackParamList = {
+  Auth: undefined;
   Main: undefined;
   CardDetail: { card: LoyaltyCard };
   AddCard: undefined;

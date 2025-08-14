@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -6,19 +6,31 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+  Alert,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { CompositeNavigationProp } from "@react-navigation/native";
 
-import { useCards } from '../hooks/useCards';
-import { LoyaltyCard } from '../types/card';
-import { CardTemplate } from '../components/CardTemplate';
-import { SyncStatusBar } from '../components/SyncStatusBar';
+import { useCards } from "../hooks/useCards";
+import { LoyaltyCard } from "../types/card";
+import { CardTemplate } from "../components/CardTemplate";
+import { SyncStatusBar } from "../components/SyncStatusBar";
+import { RootStackParamList, RootTabParamList } from "../types/navigation";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
+
+type NavigationProp = CompositeNavigationProp<
+  StackNavigationProp<RootStackParamList>,
+  BottomTabNavigationProp<RootTabParamList>
+>;
 
 export const DashboardScreen: React.FC = () => {
   const { cards, favoriteCards } = useCards();
+  const navigation = useNavigation<NavigationProp>();
 
   const renderQuickStats = () => (
     <View style={styles.statsContainer}>
@@ -44,19 +56,23 @@ export const DashboardScreen: React.FC = () => {
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent Cards</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("Cards")}>
           <Text style={styles.viewAllText}>View All</Text>
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {cards.slice(0, 5).map((card) => (
-          <CardTemplate
+          <TouchableOpacity
             key={card.id}
-            card={card}
-            compact={true}
-            showBarcode={false}
-            style={styles.compactCard}
-          />
+            onPress={() => navigation.navigate("CardDetail", { card })}
+          >
+            <CardTemplate
+              card={card}
+              compact={true}
+              showBarcode={false}
+              style={styles.compactCard}
+            />
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
@@ -66,15 +82,30 @@ export const DashboardScreen: React.FC = () => {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Quick Actions</Text>
       <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate("Scan")}
+        >
           <Ionicons name="scan" size={32} color="#007AFF" />
           <Text style={styles.actionText}>Scan Card</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate("AddCard")}
+        >
           <Ionicons name="add-circle" size={32} color="#34C759" />
           <Text style={styles.actionText}>Add Card</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => {
+            Alert.alert(
+              "Find Stores",
+              "Store locator feature coming soon! This will help you find nearby stores that accept your loyalty cards.",
+              [{ text: "OK" }]
+            );
+          }}
+        >
           <Ionicons name="location" size={32} color="#FF9500" />
           <Text style={styles.actionText}>Find Stores</Text>
         </TouchableOpacity>
@@ -103,40 +134,40 @@ export const DashboardScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   scrollView: {
     flex: 1,
   },
   header: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginBottom: 10,
   },
   welcomeText: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   subtitleText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginTop: 5,
   },
   statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     marginBottom: 20,
   },
   statCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 15,
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
     marginHorizontal: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -144,48 +175,48 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginTop: 5,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   section: {
     marginBottom: 25,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     marginBottom: 15,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   viewAllText: {
-    color: '#007AFF',
+    color: "#007AFF",
     fontSize: 14,
   },
   compactCard: {
     marginLeft: 20,
   },
   actionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
     paddingHorizontal: 20,
   },
   actionButton: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    alignItems: "center",
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -195,7 +226,7 @@ const styles = StyleSheet.create({
   actionText: {
     marginTop: 8,
     fontSize: 12,
-    color: '#333',
-    textAlign: 'center',
+    color: "#333",
+    textAlign: "center",
   },
 });

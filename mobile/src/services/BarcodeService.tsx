@@ -1,16 +1,16 @@
-import React from 'react';
-import Svg, { G, Rect, Text as SvgText } from 'react-native-svg';
-import JsBarcode from 'jsbarcode';
+import React from "react";
+import Svg, { G, Rect, Text as SvgText } from "react-native-svg";
+import JsBarcode from "jsbarcode";
 
-import { LoyaltyCard } from '../types/card';
+import { LoyaltyCard } from "../types/card";
 
 export interface BarcodeConfig {
   width: number;
   height: number;
-  format: LoyaltyCard['barcodeType'];
+  format: LoyaltyCard["barcodeType"];
   displayValue: boolean;
-  textAlign?: 'left' | 'center' | 'right';
-  textPosition?: 'bottom' | 'top';
+  textAlign?: "left" | "center" | "right";
+  textPosition?: "bottom" | "top";
   fontSize?: number;
   textMargin?: number;
   background?: string;
@@ -20,20 +20,20 @@ export interface BarcodeConfig {
 export class BarcodeService {
   // Generate barcode as SVG elements for React Native
   generateBarcodeSVG(
-    value: string, 
+    value: string,
     config: Partial<BarcodeConfig> = {}
   ): React.ReactElement {
     const defaultConfig: BarcodeConfig = {
       width: 200,
       height: 50,
-      format: 'CODE128',
+      format: "CODE128",
       displayValue: true,
-      textAlign: 'center',
-      textPosition: 'bottom',
+      textAlign: "center",
+      textPosition: "bottom",
       fontSize: 12,
       textMargin: 5,
-      background: '#ffffff',
-      lineColor: '#000000',
+      background: "#ffffff",
+      lineColor: "#000000",
     };
 
     const finalConfig = { ...defaultConfig, ...config };
@@ -41,34 +41,34 @@ export class BarcodeService {
     try {
       // Generate barcode data using jsbarcode (without canvas)
       const barcodeData = this.generateBarcodeData(value, finalConfig);
-      
+
       return this.renderBarcodeSVG(barcodeData, finalConfig, value);
     } catch (error) {
-      console.error('Barcode generation error:', error);
+      console.error("Barcode generation error:", error);
       return this.renderErrorBarcode(finalConfig);
     }
   }
 
   // Generate QR code (simplified implementation)
   generateQRCodeSVG(
-    value: string, 
+    value: string,
     config: Partial<BarcodeConfig> = {}
   ): React.ReactElement {
-    const finalConfig = { 
-      width: 200, 
-      height: 200, 
-      background: '#ffffff',
-      lineColor: '#000000',
-      ...config 
+    const finalConfig = {
+      width: 200,
+      height: 200,
+      background: "#ffffff",
+      lineColor: "#000000",
+      ...config,
     };
 
     // This is a simplified QR code representation
     // In a real app, you would use a proper QR code library
     return (
       <Svg width={finalConfig.width} height={finalConfig.height}>
-        <Rect 
-          width={finalConfig.width} 
-          height={finalConfig.height} 
+        <Rect
+          width={finalConfig.width}
+          height={finalConfig.height}
           fill={finalConfig.background}
         />
         {/* Simplified QR pattern */}
@@ -89,17 +89,20 @@ export class BarcodeService {
   }
 
   // Validate barcode data for different formats
-  validateBarcodeData(value: string, format: LoyaltyCard['barcodeType']): boolean {
+  validateBarcodeData(
+    value: string,
+    format: LoyaltyCard["barcodeType"]
+  ): boolean {
     switch (format) {
-      case 'CODE128':
+      case "CODE128":
         return value.length > 0; // CODE128 can encode any ASCII character
-      case 'CODE39':
+      case "CODE39":
         return /^[A-Z0-9\-. $\/+%*]+$/.test(value);
-      case 'EAN13':
+      case "EAN13":
         return /^\d{12,13}$/.test(value);
-      case 'UPC_A':
+      case "UPC_A":
         return /^\d{11,12}$/.test(value);
-      case 'QR_CODE':
+      case "QR_CODE":
         return value.length > 0; // QR codes can contain any data
       default:
         return false;
@@ -108,14 +111,14 @@ export class BarcodeService {
 
   // Get optimal barcode dimensions for different card sizes
   getOptimalDimensions(
-    cardWidth: number, 
-    format: LoyaltyCard['barcodeType']
+    cardWidth: number,
+    format: LoyaltyCard["barcodeType"]
   ): BarcodeConfig {
     const padding = 40; // Horizontal padding
     const maxWidth = cardWidth - padding;
-    
+
     switch (format) {
-      case 'QR_CODE':
+      case "QR_CODE":
         const qrSize = Math.min(maxWidth, 150);
         return {
           width: qrSize,
@@ -123,16 +126,16 @@ export class BarcodeService {
           format,
           displayValue: true,
         };
-      
-      case 'EAN13':
-      case 'UPC_A':
+
+      case "EAN13":
+      case "UPC_A":
         return {
           width: Math.min(maxWidth, 180),
           height: 60,
           format,
           displayValue: true,
         };
-      
+
       default: // CODE128, CODE39
         return {
           width: Math.min(maxWidth, 250),
@@ -146,26 +149,26 @@ export class BarcodeService {
   // Generate barcode for loyalty card
   generateCardBarcode(card: LoyaltyCard, cardWidth: number = 300) {
     const config = this.getOptimalDimensions(cardWidth, card.barcodeType);
-    
-    if (card.barcodeType === 'QR_CODE') {
+
+    if (card.barcodeType === "QR_CODE") {
       return this.generateQRCodeSVG(card.barcodeData, config);
     }
-    
+
     return this.generateBarcodeSVG(card.barcodeData, config);
   }
 
   private generateBarcodeData(value: string, config: BarcodeConfig) {
     // This is a simplified barcode data generation
     // In a real app, you would use a proper barcode library that works with React Native
-    
+
     const patterns = {
-      'CODE128': this.generateCode128Pattern(value),
-      'CODE39': this.generateCode39Pattern(value),
-      'EAN13': this.generateEAN13Pattern(value),
-      'UPC_A': this.generateUPCAPattern(value),
+      CODE128: this.generateCode128Pattern(value),
+      CODE39: this.generateCode39Pattern(value),
+      EAN13: this.generateEAN13Pattern(value),
+      UPC_A: this.generateUPCAPattern(value),
     };
 
-    return patterns[config.format] || patterns['CODE128'];
+    return patterns[config.format] || patterns["CODE128"];
   }
 
   private generateCode128Pattern(value: string) {
@@ -200,8 +203,8 @@ export class BarcodeService {
   private generateEAN13Pattern(value: string) {
     // Simplified EAN13 pattern
     const bars = [];
-    const digits = value.padStart(13, '0').substring(0, 13);
-    
+    const digits = value.padStart(13, "0").substring(0, 13);
+
     for (const digit of digits) {
       const d = parseInt(digit);
       for (let i = 0; i < 2; i++) {
@@ -214,23 +217,23 @@ export class BarcodeService {
 
   private generateUPCAPattern(value: string) {
     // UPC-A is similar to EAN13 but 12 digits
-    const digits = value.padStart(12, '0').substring(0, 12);
-    return this.generateEAN13Pattern('0' + digits); // Add leading zero for EAN13 format
+    const digits = value.padStart(12, "0").substring(0, 12);
+    return this.generateEAN13Pattern("0" + digits); // Add leading zero for EAN13 format
   }
 
   private renderBarcodeSVG(
-    barcodeData: number[], 
-    config: BarcodeConfig, 
+    barcodeData: number[],
+    config: BarcodeConfig,
     value: string
   ): React.ReactElement {
     const barWidth = config.width / barcodeData.length;
     const bars = [];
-    
+
     let x = 0;
     for (let i = 0; i < barcodeData.length; i++) {
       const barHeight = barcodeData[i];
       const isBar = i % 2 === 0; // Alternate between bars and spaces
-      
+
       if (isBar) {
         bars.push(
           <Rect
@@ -248,14 +251,12 @@ export class BarcodeService {
 
     return (
       <Svg width={config.width} height={config.height}>
-        <Rect 
-          width={config.width} 
-          height={config.height} 
+        <Rect
+          width={config.width}
+          height={config.height}
           fill={config.background}
         />
-        <G>
-          {bars}
-        </G>
+        <G>{bars}</G>
         {config.displayValue && (
           <SvgText
             x={config.width / 2}
@@ -275,7 +276,7 @@ export class BarcodeService {
     // Simplified QR code pattern - just some squares for demonstration
     const elements = [];
     const cellSize = Math.floor(config.width / 25);
-    
+
     // Generate a simple pattern based on the value
     for (let row = 0; row < 25; row++) {
       for (let col = 0; col < 25; col++) {
@@ -294,16 +295,16 @@ export class BarcodeService {
         }
       }
     }
-    
+
     return elements;
   }
 
   private renderErrorBarcode(config: BarcodeConfig): React.ReactElement {
     return (
       <Svg width={config.width} height={config.height}>
-        <Rect 
-          width={config.width} 
-          height={config.height} 
+        <Rect
+          width={config.width}
+          height={config.height}
           fill="#f0f0f0"
           stroke="#ccc"
           strokeWidth={1}

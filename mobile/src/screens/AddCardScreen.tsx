@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,49 +7,65 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
 
-import { useCards } from '../hooks/useCards';
-import { LoyaltyCard } from '../types/card';
+import { useCards } from "../hooks/useCards";
+import { LoyaltyCard } from "../types/card";
+import { RootStackParamList } from "../types/navigation";
 
 const CARD_COLORS = [
-  '#007AFF', '#34C759', '#FF3B30', '#FF9500',
-  '#5856D6', '#AF52DE', '#FF2D92', '#A2845E',
+  "#007AFF",
+  "#34C759",
+  "#FF3B30",
+  "#FF9500",
+  "#5856D6",
+  "#AF52DE",
+  "#FF2D92",
+  "#A2845E",
 ];
 
 const CARD_CATEGORIES = [
-  'Retail', 'Grocery', 'Restaurant', 'Gas Station',
-  'Pharmacy', 'Coffee', 'Clothing', 'Electronics',
+  "Retail",
+  "Grocery",
+  "Restaurant",
+  "Gas Station",
+  "Pharmacy",
+  "Coffee",
+  "Clothing",
+  "Electronics",
 ];
 
+type NavigationProp = StackNavigationProp<RootStackParamList>;
+
 export const AddCardScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const { addCard } = useCards();
-  
-  const [cardName, setCardName] = useState('');
-  const [storeName, setStoreName] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
+
+  const [cardName, setCardName] = useState("");
+  const [storeName, setStoreName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
   const [selectedColor, setSelectedColor] = useState(CARD_COLORS[0]);
   const [selectedCategory, setSelectedCategory] = useState(CARD_CATEGORIES[0]);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSaveCard = async () => {
     if (!cardName.trim() || !storeName.trim() || !cardNumber.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert("Error", "Please fill in all required fields");
       return;
     }
 
     setIsLoading(true);
     try {
-      const newCard: Omit<LoyaltyCard, 'id' | 'createdAt' | 'updatedAt'> = {
+      const newCard: Omit<LoyaltyCard, "id" | "createdAt" | "updatedAt"> = {
         name: cardName.trim(),
         store: storeName.trim(),
         cardNumber: cardNumber.trim(),
-        barcodeType: 'CODE128',
+        barcodeType: "CODE128",
         barcodeData: cardNumber.trim(),
         color: selectedColor,
         category: selectedCategory,
@@ -58,11 +74,11 @@ export const AddCardScreen: React.FC = () => {
       };
 
       await addCard(newCard);
-      Alert.alert('Success', 'Card added successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert("Success", "Card added successfully!", [
+        { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to add card. Please try again.');
+      Alert.alert("Error", "Failed to add card. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -104,10 +120,12 @@ export const AddCardScreen: React.FC = () => {
             ]}
             onPress={() => setSelectedCategory(category)}
           >
-            <Text style={[
-              styles.categoryText,
-              selectedCategory === category && styles.selectedCategoryText,
-            ]}>
+            <Text
+              style={[
+                styles.categoryText,
+                selectedCategory === category && styles.selectedCategoryText,
+              ]}
+            >
               {category}
             </Text>
           </TouchableOpacity>
@@ -120,15 +138,11 @@ export const AddCardScreen: React.FC = () => {
     <View style={styles.previewSection}>
       <Text style={styles.sectionTitle}>Preview</Text>
       <View style={[styles.cardPreview, { backgroundColor: selectedColor }]}>
-        <Text style={styles.previewCardName}>
-          {cardName || 'Card Name'}
-        </Text>
-        <Text style={styles.previewStoreName}>
-          {storeName || 'Store Name'}
-        </Text>
+        <Text style={styles.previewCardName}>{cardName || "Card Name"}</Text>
+        <Text style={styles.previewStoreName}>{storeName || "Store Name"}</Text>
         <View style={styles.previewCardNumber}>
           <Text style={styles.previewCardNumberText}>
-            {cardNumber || '1234567890'}
+            {cardNumber || "1234567890"}
           </Text>
         </View>
       </View>
@@ -142,7 +156,7 @@ export const AddCardScreen: React.FC = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Card Information</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Card Name *</Text>
             <TextInput
@@ -196,7 +210,16 @@ export const AddCardScreen: React.FC = () => {
         </View>
 
         <View style={styles.actionSection}>
-          <TouchableOpacity style={styles.scanButton}>
+          <TouchableOpacity
+            style={styles.scanButton}
+            onPress={() => {
+              navigation.goBack();
+              // Navigate to Scan tab after going back
+              setTimeout(() => {
+                navigation.getParent()?.navigate("Scan");
+              }, 100);
+            }}
+          >
             <Ionicons name="scan" size={20} color="#007AFF" />
             <Text style={styles.scanButtonText}>Scan Instead</Text>
           </TouchableOpacity>
@@ -207,7 +230,7 @@ export const AddCardScreen: React.FC = () => {
             disabled={isLoading}
           >
             <Text style={styles.saveButtonText}>
-              {isLoading ? 'Saving...' : 'Save Card'}
+              {isLoading ? "Saving..." : "Save Card"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -219,7 +242,7 @@ export const AddCardScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   scrollView: {
     flex: 1,
@@ -230,8 +253,8 @@ const styles = StyleSheet.create({
   cardPreview: {
     borderRadius: 15,
     padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -239,34 +262,34 @@ const styles = StyleSheet.create({
   },
   previewCardName: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 5,
   },
   previewStoreName: {
     fontSize: 16,
-    color: '#fff',
+    color: "#fff",
     opacity: 0.9,
     marginBottom: 15,
   },
   previewCardNumber: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 8,
   },
   previewCardNumberText: {
-    color: '#fff',
-    fontFamily: 'monospace',
+    color: "#fff",
+    fontFamily: "monospace",
     fontSize: 14,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginHorizontal: 20,
     marginBottom: 15,
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -274,8 +297,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 15,
   },
   inputGroup: {
@@ -283,110 +306,110 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    color: '#333',
+    color: "#333",
     marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#e1e1e1',
+    borderColor: "#e1e1e1",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
+    color: "#333",
+    backgroundColor: "#f9f9f9",
   },
   textArea: {
     borderWidth: 1,
-    borderColor: '#e1e1e1',
+    borderColor: "#e1e1e1",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
+    color: "#333",
+    backgroundColor: "#f9f9f9",
     minHeight: 80,
   },
   colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
   colorOption: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginBottom: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   selectedColor: {
-    borderColor: '#333',
+    borderColor: "#333",
   },
   categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
   categoryOption: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e1e1e1',
-    minWidth: '30%',
-    alignItems: 'center',
+    borderColor: "#e1e1e1",
+    minWidth: "30%",
+    alignItems: "center",
   },
   selectedCategory: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
   },
   categoryText: {
     fontSize: 12,
-    color: '#333',
-    fontWeight: '500',
+    color: "#333",
+    fontWeight: "500",
   },
   selectedCategoryText: {
-    color: '#fff',
+    color: "#fff",
   },
   actionSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingBottom: 20,
     gap: 10,
   },
   scanButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
     paddingVertical: 15,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: "#007AFF",
   },
   scanButtonText: {
-    color: '#007AFF',
+    color: "#007AFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 8,
   },
   saveButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     paddingVertical: 15,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   disabledButton: {
     opacity: 0.6,
